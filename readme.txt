@@ -8,3 +8,4 @@ gene2\tgene3\tpcc1\n
 gene2\tgene4\tpcc1\n
 ...
 
+see PCC defination here: http://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
