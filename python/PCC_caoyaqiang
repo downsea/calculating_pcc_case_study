@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+#--coding:utf-8--
+
+import time,string,argparse,math
+from multiprocessing import Pool
+
+
+def create_help_parser():
+      epilog_string="Any bug is welcome reported to caoyaqiang0410@gmail.com"
+      description_string='The programe is going to caculate the Pearson Correlation Coefficient of  the related genes in the data file.'
+      parser = argparse.ArgumentParser(description=description_string,epilog=epilog_string)
+      parser.add_argument('-f', '--file', dest='fnIn', help='input file name.', required=True)
+      parser.add_argument('-o', '--output', dest='fnOut', help='output file name, default is output.txt', default='output.txt')
+      parser.add_argument('-p','--Process Number',type=int,dest='process_number',required=True,help='Input the process number need for the programme, n default.')
+      op=parser.parse_args()
+      return op
+
+
+
+def read_in(fnIn):
+      fnIn=open(fnIn)
+      i=0
+      all_data=[]
+      gene_id=[]
+      for line in fnIn:
+            if i==0:
+                  line=line.split('\t')
+                  if line[-1]=='\n':
+                        line[-1]=''
+                  gene_length=len(line)-1
+                  first_line=line
+                  i=i+1
+            else:
+                  line=line.split('\t')
+                  if line[-1]=='\n':
+                        line[-1]=''
+                  data=map(string.atof,line[1:])
+                  data_sum=sum(data)
+                  data_mean=data_sum/len(data)
+                  zscore=lambda j : (j-data_mean)*(j-data_mean)
+                  std=map(zscore,data)
+                  std=math.sqrt(sum(std)/len(data))
+                  if std==0:
+                        continue
+                  else:
+                        zscore2=lambda j : (j-data_mean)/std
+                        data=map(zscore2,data)
+                        gene_id.append(line[0])
+                        all_data.append(data)
+      fnIn.close()
+      print 'Subfunction read_in is finished.'
+      return gene_id,all_data            
+
+
+
+def spcc(t):
+      data=zip(t[0],t[1])
+      cal=lambda j:j[0]*j[1]
+      r=sum(map(cal,data))/(len(data)-1)
+      return r      
+
+def mpcc(gene_id,all_data,p,fnOut):
+        pool=Pool(processes=p)
+        pool_input=[]
+        data_len=len(all_data)
+        for i in range(0,data_len):
+            for j in range(i+1,data_len):
+                  pool_input.append([all_data[i],all_data[j]])
+        results=pool.map(spcc,pool_input)
+        fnOut=open(fnOut,'w')
+        k=0
+        for i in range(0,data_len):
+            for j in range(i+1,data_len):
+                  line=gene_id[i]+'\t'+gene_id[j]+'\t'+str(results[k])+'\n'
+                  fnOut.write(line)
+                  k=k+1
+        fnOut.close()
+        print 'Subfunction mpcc is finished.'
+
+
+
+def main_process():
+      op=create_help_parser()
+      gene_id,all_data=read_in(op.fnIn)
+      mpcc(gene_id,all_data,op.process_number,op.fnOut)
+
+
+
+if __name__=='__main__':
+      start_time=time.clock()
+      main_process()
+      elapsed=time.clock()-start_time
+      print "The process is done"
+      print "Time used:",elapsed
+
